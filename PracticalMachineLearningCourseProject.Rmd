@@ -1,0 +1,122 @@
+---
+title: "Practical Machine Learning Course Project"
+author: "E.T. Moseley"
+date: "January 28, 2017"
+output:
+  html_document: default
+  pdf_document: default
+  word_document: default
+---
+#Executive Summary
+
+how you built your model
+how you used cross validation
+what you think the expected out of sample error is
+why you made the choices you did
+
+In the aforementioned study, six participants participated in a dumbell lifting exercise five different ways. 
+
+The five ways, as described in the study, were “exactly according to the specification (Class A), 
+throwing the elbows to the front (Class B), 
+lifting the dumbbell only halfway (Class C), 
+lowering the dumbbell only halfway (Class D) and 
+throwing the hips to the front (Class E). 
+
+By processing data gathered from accelerometers on the belt, forearm, arm, and dumbell of the participants in a machine learning algorithm, the question is can the appropriate activity quality (class A-E) be predicted?
+
+
+```{r}
+require("caret")
+require("rpart")
+require("nnet")
+#require("rattle")#Causes my mac to crash
+require("e1071")
+require("gbm")
+```
+
+```{r}
+train <- read.csv("/Users/Edward/Desktop/PracticalMachineLearning/pml-training.csv", header = TRUE, stringsAsFactors = FALSE)
+```
+
+We will view the dimension's of the training set
+
+```{r}
+dim(train)
+```
+
+We see there are 19622 observations of 160 variables.
+
+```{r}
+head(colnames(train))
+```
+
+#Data Preprocessing
+
+We will be predicting the `classe`, but let us remove columns `X`, `user_name`, `raw_timestamp_part_1`, `raw_timestamp_part_2` and `cvtd_timestamp` as they should not be predictive in our model.
+
+```{r}
+train$X <- NULL
+train$user_name <- NULL
+train$raw_timestamp_part_1 <- NULL
+train$raw_timestamp_part_2 <- NULL
+train$cvtd_timestamp <- NULL
+```
+
+
+Let's partition data 80%-20%
+
+```{r}
+set.seed(123)
+trainSet <- createDataPartition(y=train$classe, p=0.8, list=FALSE)
+trainOne <- train[trainSet, ] 
+testOne <- train[-trainSet, ]
+```
+
+We can remove variables with near-zero variance, which are unlikely to add predictive power to our model.
+
+```{r}
+lowVar <- nearZeroVar(trainOne, saveMetrics=TRUE)
+head(lowVar)
+```
+
+Now we will remove these low-variability data from our sets:
+
+```{r}
+trainOne <- trainOne[,!(lowVar$nzv)]
+testOne <- testOne[,!(lowVar$nzv)]
+dim(trainOne)
+```
+
+Furthermore, throughout this analysis we will be ignoring NA values with `na.action = na.pass`.
+
+#Modeling
+
+Now we will generate an rpart model and evaluate it:
+
+###CART (Classification and Regression Tree) Model
+
+```{r}
+attach(trainOne)
+rpartModel <- train(classe ~ ., data = trainOne, method="rpart", na.action = na.pass)
+rpartModel
+```
+
+Let's apply this model to our test set:
+
+```{r}
+confusionMatrix(predict(rpartModel, newdata=testOne, na.action = na.pass), testOne$classe)
+```
+###Out-of-sample Error
+
+It is helpful to view the accuracy of the model:
+
+```{r}
+confusionMatrix(predict(rpartModel, newdata=testOne, na.action = na.pass), testOne$classe)$overall["Accuracy"]
+```
+
+Unfortunately, the accuracy is relatively low.
+
+```{r}
+
+
+```
